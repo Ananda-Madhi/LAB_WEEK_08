@@ -11,6 +11,7 @@ import com.example.lab_week_08.worker.SecondWorker
 import com.example.lab_week_08.R
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import com.example.lab_week_08.worker.ThirdWorker
 
 
 class MainActivity : AppCompatActivity() {
@@ -36,8 +37,14 @@ class MainActivity : AppCompatActivity() {
             .setInputData(getIdInputData(SecondWorker.INPUT_DATA_ID, Id))
             .build()
 
+        val thirdRequest = OneTimeWorkRequestBuilder<ThirdWorker>()
+            .setConstraints(networkConstraints)
+            .build()
+
+
         workManager.beginWith(firstRequest)
             .then(secondRequest)
+            .then(thirdRequest)
             .enqueue()
 
         workManager.getWorkInfoByIdLiveData(firstRequest.id)
@@ -53,6 +60,12 @@ class MainActivity : AppCompatActivity() {
                 if (info?.state?.isFinished == true) {
                     showResult("Second process is done")
                 }
+            }
+        workManager.getWorkInfoByIdLiveData(thirdRequest.id).observe(this) { info ->
+            if (info?.state?.isFinished == true) {
+                showResult("Third process is done")
+                launchSecondNotificationService()
+            }
             }
     }
 
@@ -74,6 +87,16 @@ class MainActivity : AppCompatActivity() {
         }
         ContextCompat.startForegroundService(this, serviceIntent)
     }
+    private fun launchSecondNotificationService() {
+        SecondNotificationService.trackingCompletion.observe(this) { id ->
+            showResult("Final process for Channel ID $id is done!")
+        }
+        val serviceIntent = Intent(this, SecondNotificationService::class.java).apply {
+            putExtra(SecondNotificationService.EXTRA_ID, "002")
+        }
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
 
     companion object {
         const val EXTRA_ID = "Id"
